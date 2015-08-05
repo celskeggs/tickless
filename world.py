@@ -2,6 +2,7 @@ __author__ = 'colby'
 
 import bisect
 import math
+import tile
 
 
 class Tileset:
@@ -48,21 +49,46 @@ DIRECTION_COLORS = [(0, 255, 0), (0, 0, 255), (255, 0, 0), (255, 255, 0)]
 
 class Grid:
 	def __init__(self, width, height, tileset, renderer, default_tile, solid_tiles):
+		self.zlevel = None
 		self.tileset = tileset
 		self.renderer = renderer
 		self.layer = [[default_tile] * height for _ in range(width)]
+		self.tiles = {}
 		self.segments = [[], [], [], []]
 		self.solid_tiles = solid_tiles
 		self.cache_dirty = True
 
 	def __getitem__(self, item):
+		if item in self.tiles:
+			return self.tiles[item]
 		x, y = item
 		return self.layer[x][y]
 
 	def __setitem__(self, item, value):
 		x, y = item
+		if item in self.tiles:
+			self.tiles[item].remove()
+			del self.tiles[item]
+		if isinstance(value, tile.Tile):
+			self.tiles[item] = value
+			self.layer[x][y] = None
+			value.add(self.zlevel, x, y)
+			assert self.layer[x][y] is not None, "Tile didn't add an icon!"
+		else:
+			self.layer[x][y] = value
+		self.dirty_cache()
+
+	def update_icon_only(self, x, y, value):
 		self.layer[x][y] = value
-		self.cache_dirty = True
+		self.dirty_cache()
+
+	def dirty_cache(self):
+		if not self.cache_dirty:
+			self.zlevel.time_provider.on_next(self.zlevel.on_update_map)
+			self.cache_dirty = True
+
+	def get_icon_only(self, x, y):
+		return self.layer[x][y]
 
 	def render(self, rx, ry):
 		for x, column in enumerate(self.layer):
@@ -93,7 +119,6 @@ class Grid:
 
 	def recalculate_cache(self):
 		assert self.cache_dirty
-		print("RECALCULATE")
 		for i, direction in enumerate(DIRECTIONS):
 			vertical = not direction[0]
 			# represented by the (x, y) of the cell to the lower-right. so the two upper-left-corner lines are both (0, 0)
@@ -127,7 +152,6 @@ class Grid:
 			else:
 				ci, cd = self.tileset.cell_size()
 			self.segments[i] = [(dep * cd, idp1 * ci, idp2 * ci) for dep, idp1, idp2 in merged]
-			print("Segments", i, len(self.segments[i]))
 		self.cache_dirty = False
 
 	def ray_cast(self, origin, direction, is_vertical, fudge_factor):  # returns distance
@@ -173,6 +197,8 @@ class Grid:
 class ZLevel:
 	def __init__(self, grid, time_provider):
 		self.grid = grid
+		assert grid.zlevel is None
+		grid.zlevel = self
 		self.time_provider = time_provider
 		self.entities = []
 
@@ -187,3 +213,7 @@ class ZLevel:
 		now = self.time_provider.now()
 		for ent in self.entities:
 			ent.render(rx, ry, now)
+
+	def on_update_map(self):
+		for ent in self.entities:
+			ent.on_update_map()

@@ -72,10 +72,13 @@ class EventLoop:
 	def now(self):
 		return self._now
 
-	def add_timer_at(self, mono, cb):
+	def on_next(self, cb, *args):
+		self.add_timer(0, cb, *args)
+
+	def add_timer_at(self, mono, cb, *args):
 		if mono == float("inf"):
 			return do_nothing  # don't even bother
-		tup = (mono, self.entryid, cb)
+		tup = (mono, self.entryid, cb) + tuple(args)
 		heapq.heappush(self.timers, tup)
 		self.entryid += 1
 
@@ -85,13 +88,13 @@ class EventLoop:
 			self.timers[self.timers.index(tup)] = (mono, tup[1], do_nothing)
 		return remove
 
-	def add_timer(self, timeout, cb):
-		return self.add_timer_at(self.now() + timeout, cb)
+	def add_timer(self, timeout, cb, *args):
+		return self.add_timer_at(self.now() + timeout, cb, *args)
 
-	def add_interval(self, interval, cb):
+	def add_interval(self, interval, cb, *args):
 		def wrap_cb():
 			self.add_timer(interval, wrap_cb)
-			cb()
+			cb(*args)
 		self.add_timer(interval, wrap_cb)
 
 	def pump(self):
@@ -99,7 +102,7 @@ class EventLoop:
 		while self.timers and self.timers[0][0] <= now:
 			timer = heapq.heappop(self.timers)
 			self._now = timer[0]
-			timer[2]()
+			timer[2](*timer[3:])
 
 		self._now = now
 

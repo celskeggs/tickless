@@ -5,7 +5,7 @@ import math
 
 class Entity:
 	# note: get_velocity must be constant between posts of on_kinematic_update
-	valid_messages = ("on_add", "get_pos", "on_kinematic_update", "get_velocity", "get_size", "on_collide", "set_velocity", "control_move")
+	valid_messages = ("on_add", "get_pos", "on_kinematic_update", "get_velocity", "get_size", "on_collide", "set_velocity", "control_move", "on_update_map")
 
 	def __init__(self, *components):
 		if len(components) == 1 and type(components[0]) == list:
@@ -88,6 +88,10 @@ class PositionVelocity:
 	def on_collide(self, ent, horizontally, vertically):
 		_, _, vx, vy, _ = ent.pos_vel_time
 		ent.set_velocity(0 if horizontally else vx, 0 if vertically else vy)
+
+	def on_update_map(self, ent):
+		_, _, vx, vy, _ = ent.pos_vel_time
+		ent.set_velocity(vx, vy)
 
 	def set_velocity(self, ent, new_vx, new_vy):
 		x, y, vx, vy, start_time = ent.pos_vel_time
