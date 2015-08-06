@@ -1,8 +1,10 @@
 __author__ = 'colby'
 
+import gui
+
 
 class Tile:
-	valid_messages = ()
+	valid_messages = ("on_click", "on_event")
 
 	def __init__(self, *components):
 		self.components = components
@@ -34,6 +36,10 @@ class Tile:
 			return self.zlevel.time_provider.now()
 		raise AttributeError("%r object has no attribute %r" % (self.__class__, name))
 
+	def __setattr__(self, name, value):
+		object.__setattr__(self, name, value)
+		self.post_event("on_update_" + name)
+
 	def set_icon(self, icon):
 		self.zlevel.grid.update_icon_only(self.x, self.y, icon)
 
@@ -48,15 +54,35 @@ class SimpleIcon:
 		ent.set_icon(self.icon)
 
 class ChangingIcon:
-	def __init__(self, icon1, icon2):
-		self.icon1, self.icon2 = icon1, icon2
+	def __init__(self, icon1, icon2, var):
+		self.icon1, self.icon2, self.var = icon1, icon2, var
 
 	def on_add(self, ent):
 		self._update(ent)
 
-	def _update(self, ent):
-		ent.set_icon(self.icon1 if ent.get_icon() == self.icon2 else self.icon2)
-		ent.zlevel.time_provider.add_timer(1, self._update, ent)
+	def var_update(self, ent, name):
+		if name == self.var:
+			self._update(ent)
 
-def ExampleTile(icon1, icon2):
-	return Tile(ChangingIcon(icon1, icon2))
+	def _update(self, ent):
+		ent.set_icon(self.icon1 if getattr(ent, self.var) else self.icon2)
+
+class DoorComponent:
+	def __init__(self, open, closed):
+		self.open_icon = open
+		self.closed_icon = closed
+
+	def on_add(self, ent):
+		ent.is_open = False
+
+	def on_click(self, ent, x, y):
+		ent.zlevel.gui = gui.DoorGUI(ent)
+
+	def toggle(self, ent):
+		ent.is_open = not ent.is_open
+
+	def on_update_is_open(self, ent):
+		ent.set_icon(self.open_icon if ent.is_open else self.closed_icon)
+
+def Door():
+	return Tile(DoorComponent((2, 0), (3, 0)))

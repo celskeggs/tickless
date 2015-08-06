@@ -26,7 +26,7 @@ class Tileset:
 			(base_x + cells_x * self.cw, base_y + cells_y * self.ch, self.cw, self.ch))
 
 	def unmap(self, mouse_x, mouse_y):
-		return mouse_x // self.cw, mouse_y // self.ch
+		return mouse_x // self.cw, mouse_y // self.ch, mouse_x % self.cw, mouse_y % self.ch
 
 	def destroy(self):
 		self.image.destroy()
@@ -106,10 +106,10 @@ class Grid:
 
 	def unmap(self, mouse_x, mouse_y):
 		if 0 <= mouse_x and 0 <= mouse_y:
-			cx, cy = self.tileset.unmap(mouse_x, mouse_y)
+			cx, cy, rx, ry = self.tileset.unmap(mouse_x, mouse_y)
 			if cx < len(self.layer) and cy < len(self.layer[cx]):
-				return cx, cy
-		return None
+				return cx, cy, rx, ry
+		return None, None, None, None
 
 	def is_solid(self, x, y):
 		return x < 0 or x >= len(self.layer) or y < 0 or y >= len(self.layer[x]) or self.layer[x][y] in self.solid_tiles
@@ -199,8 +199,10 @@ class ZLevel:
 		self.grid = grid
 		assert grid.zlevel is None
 		grid.zlevel = self
+		self.renderer = grid.renderer
 		self.time_provider = time_provider
 		self.entities = []
+		self.gui = None
 
 	def add_entity(self, ent):
 		self.entities.append(ent)
@@ -208,11 +210,13 @@ class ZLevel:
 		ent.on_add(self)
 		return ent
 
-	def render(self, rx, ry):
+	def render(self, rx, ry, gcx, gcy):
 		self.grid.render(rx, ry)
 		now = self.time_provider.now()
 		for ent in self.entities:
 			ent.render(rx, ry, now)
+		if self.gui is not None:
+			self.gui.render(gcx, gcy)
 
 	def on_update_map(self):
 		for ent in self.entities:

@@ -33,6 +33,7 @@ class Window:
 		# TODO: flag control
 		self.handle = check(sdl.createWindow(title, x, y, width, height, sdl.WINDOW_OPENGL), "Could not create window")
 		self.winid = sdl.getWindowID(self.handle)
+		self.size = width, height
 		_windows[self.winid] = self
 
 	def create_renderer(self):

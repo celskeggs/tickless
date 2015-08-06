@@ -17,6 +17,7 @@ def quitt(*args):
 
 def main():
 	window = sdle.Window("Example", 640, 480)
+	ww, wh = window.get_size()
 	tileset = world.Tileset(window, "tileset2.png", 4, 4)
 	pyramid = window.load_image("pyramid_smaller.png")
 	print(pyramid.get_size())
@@ -26,9 +27,21 @@ def main():
 	cycle = [(0, 0), (1, 0)]
 
 	def click(win, x, y, button, clicks):
-		tup = zlevel.grid.unmap(x - 5, y - 5)
-		if tup and zlevel.grid[tup] in cycle:
-			zlevel.grid[tup] = cycle[(cycle.index(zlevel.grid[tup]) + (1 if button == 1 else -1)) % len(cycle)]
+		if zlevel.gui is not None:
+			w, h = zlevel.gui.get_size()
+			rx, ry = x - ww / 2, y - wh / 2
+			if -w/2 <= rx <= w/2 and -h/2 <= ry <= h/2:
+				zlevel.gui.click(rx, ry, button)
+			else:
+				gui = zlevel.gui
+				zlevel.gui = None
+				gui.on_close()
+		else:
+			cx, cy, rx, ry = zlevel.grid.unmap(x - 5, y - 5)
+			if cx:
+				ent = zlevel.grid[cx, cy]
+				if isinstance(ent, tile.Tile):
+					ent.on_click(rx, ry)
 	directions = [False, False, False, False]
 	direction_codes = (sdl.SCANCODE_W, sdl.SCANCODE_A, sdl.SCANCODE_S, sdl.SCANCODE_D)
 
@@ -52,7 +65,7 @@ def main():
 	zlevel = world.ZLevel(world.Grid(19, 14, tileset, window, (0, 0), [(0, 0), (2, 0)]), loop)
 	for x in range(3, 13):
 		if x == 7:
-			zlevel.grid[x, 7] = tile.ExampleTile((2, 0), (3, 0))
+			zlevel.grid[x, 7] = tile.Door()
 			continue
 		for y in range(6, 9):
 			zlevel.grid[x, y] = (1, 0)
@@ -66,7 +79,7 @@ def main():
 		# Unlimited FPS ftw?
 		loop.pump()
 		window.clear()
-		zlevel.render(5, 5)
+		zlevel.render(5, 5, ww / 2, wh / 2)
 		window.present()
 		render_frames += 1
 		if render_frames % 3000 == 0:

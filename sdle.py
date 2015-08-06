@@ -34,6 +34,8 @@ class Window:
 	def present(self):
 		self.renderer.present()
 
+	def get_size(self):
+		return self.window.size
 
 class Image:
 	def __init__(self, name, window):
