@@ -3,17 +3,18 @@ __author__ = 'colby'
 import bisect
 import math
 import tile
+import sdle
 
 
 class Tileset:
-	def __init__(self, window, name, width, height, cell_width=32, cell_height=32):
-		self.image = window.load_image(name)
+	def __init__(self, name, width, height, cell_width=32, cell_height=32):
+		self.image = name
+		real_height, real_width = sdle.get_image_size(name)
 		self.cw, self.ch = cell_width, cell_height
 		self.w, self.h = width, height
-		real_width, real_height = self.image.get_size()
 		assert real_width == width * cell_width and real_height == height * cell_height, "Tileset has unexpected bounds!"
 
-	def render(self, texture_x, texture_y=None, base_x=0, base_y=0, cells_x=0, cells_y=0):
+	def render(self, renderer, texture_x, texture_y=None, base_x=0, base_y=0, cells_x=0, cells_y=0):
 		if texture_y is None:
 			if type(texture_x) == tuple:
 				texture_x, texture_y = texture_x
@@ -21,15 +22,13 @@ class Tileset:
 				texture_y = texture_x / self.w
 				texture_x %= self.w
 		assert 0 <= texture_x < self.w and 0 <= texture_y < self.h
-		self.image.render(
+		renderer.draw_image(
+			self.image,
 			(texture_x * self.cw, texture_y * self.ch, self.cw, self.ch),
 			(base_x + cells_x * self.cw, base_y + cells_y * self.ch, self.cw, self.ch))
 
 	def unmap(self, mouse_x, mouse_y):
 		return mouse_x // self.cw, mouse_y // self.ch, mouse_x % self.cw, mouse_y % self.ch
-
-	def destroy(self):
-		self.image.destroy()
 
 	def cell_size(self):
 		return self.cw, self.ch
@@ -47,16 +46,22 @@ IDX_RIGHT = DIRECTIONS.index(DIR_RIGHT)
 DIRECTION_COLORS = [(0, 255, 0), (0, 0, 255), (255, 0, 0), (255, 255, 0)]
 
 
-class Grid:
-	def __init__(self, width, height, tileset, renderer, default_tile, solid_tiles):
-		self.zlevel = None
+class World:
+	def __init__(self, width, height, tileset, default_tile, solid_tiles, time_provider):
 		self.tileset = tileset
-		self.renderer = renderer
+		self.time_provider = time_provider
 		self.layer = [[default_tile] * height for _ in range(width)]
 		self.tiles = {}
 		self.segments = [[], [], [], []]
 		self.solid_tiles = solid_tiles
 		self.cache_dirty = True
+		self.entities = []
+
+	def add_entity(self, ent):
+		self.entities.append(ent)
+		ent.world = self
+		ent.on_add(self)
+		return ent
 
 	def __getitem__(self, item):
 		if item in self.tiles:
@@ -72,7 +77,7 @@ class Grid:
 		if isinstance(value, tile.Tile):
 			self.tiles[item] = value
 			self.layer[x][y] = None
-			value.add(self.zlevel, x, y)
+			value.add(self, x, y)
 			assert self.layer[x][y] is not None, "Tile didn't add an icon!"
 		else:
 			self.layer[x][y] = value
@@ -84,25 +89,36 @@ class Grid:
 
 	def dirty_cache(self):
 		if not self.cache_dirty:
-			self.zlevel.time_provider.on_next(self.zlevel.on_update_map)
+			self.time_provider.on_next(self.on_update_map)
 			self.cache_dirty = True
+
+	def on_update_map(self):
+		assert self.cache_dirty
+		for ent in self.entities:
+			ent.on_update_map()
 
 	def get_icon_only(self, x, y):
 		return self.layer[x][y]
 
-	def render(self, rx, ry):
+	def render(self, renderer, rx, ry):
 		for x, column in enumerate(self.layer):
 			for y, cell in enumerate(column):
-				self.tileset.render(cell, base_x=rx, base_y=ry, cells_x=x, cells_y=y)
+				self.tileset.render(renderer, cell, base_x=rx, base_y=ry, cells_x=x, cells_y=y)
 		# these are subtly different, which is why they aren't refactored yet
-		for y, x1, x2 in self.segments[IDX_UP]:
-			self.renderer.draw_line(rx + x1, ry + y, rx + x2, ry + y, (0, 255, 0))
-		for y, x1, x2 in self.segments[IDX_DOWN]:
-			self.renderer.draw_line(rx + x1, ry + y, rx + x2, ry + y, (0, 0, 255))
-		for x, y1, y2 in self.segments[IDX_LEFT]:
-			self.renderer.draw_line(rx + x, ry + y1, rx + x, ry + y2, (255, 0, 0))
-		for x, y1, y2 in self.segments[IDX_RIGHT]:
-			self.renderer.draw_line(rx + x, ry + y1, rx + x, ry + y2, (255, 255, 0))
+		# also, they're just debugging
+		if False:
+			for y, x1, x2 in self.segments[IDX_UP]:
+				renderer.draw_line(rx + x1, ry + y, rx + x2, ry + y, (0, 255, 0))
+			for y, x1, x2 in self.segments[IDX_DOWN]:
+				renderer.draw_line(rx + x1, ry + y, rx + x2, ry + y, (0, 0, 255))
+			for x, y1, y2 in self.segments[IDX_LEFT]:
+				renderer.draw_line(rx + x, ry + y1, rx + x, ry + y2, (255, 0, 0))
+			for x, y1, y2 in self.segments[IDX_RIGHT]:
+				renderer.draw_line(rx + x, ry + y1, rx + x, ry + y2, (255, 255, 0))
+		# end of debugging
+		now = self.time_provider.now()
+		for ent in self.entities:
+			ent.render(renderer, rx, ry, now)
 
 	def unmap(self, mouse_x, mouse_y):
 		if 0 <= mouse_x and 0 <= mouse_y:
@@ -193,31 +209,3 @@ class Grid:
 					return math.sqrt(delta_dependent * delta_dependent + delta_independent * delta_independent)
 		# infinite distance when nothing gets hit (which shouldn't happen much in practice)
 		return float("inf")
-
-class ZLevel:
-	def __init__(self, grid, time_provider):
-		self.grid = grid
-		assert grid.zlevel is None
-		grid.zlevel = self
-		self.renderer = grid.renderer
-		self.time_provider = time_provider
-		self.entities = []
-		self.gui = None
-
-	def add_entity(self, ent):
-		self.entities.append(ent)
-		ent.zlevel = self
-		ent.on_add(self)
-		return ent
-
-	def render(self, rx, ry, gcx, gcy):
-		self.grid.render(rx, ry)
-		now = self.time_provider.now()
-		for ent in self.entities:
-			ent.render(rx, ry, now)
-		if self.gui is not None:
-			self.gui.render(gcx, gcy)
-
-	def on_update_map(self):
-		for ent in self.entities:
-			ent.on_update_map()

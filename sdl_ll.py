@@ -110,6 +110,8 @@ class Surface:
 			print("Warning! Surface not destroyed properly.")
 			self.destroy()
 
+	def get_size(self):
+		return self.handle.w, self.handle.h
 
 class Texture:
 	sdl_destroyTexture = sdl.destroyTexture
