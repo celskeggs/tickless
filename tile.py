@@ -44,6 +44,7 @@ class Tile:
 	def get_icon(self):
 		return self.world.get_icon_only(self.x, self.y)
 
+
 class SimpleIcon:
 	def __init__(self, icon):
 		self.icon = icon
@@ -51,9 +52,14 @@ class SimpleIcon:
 	def on_add(self, ent):
 		ent.set_icon(self.icon)
 
+
 class TileType:
 	def __init__(self, *components):
 		self.components = components
 
 	def __call__(self):
 		return Tile(*self.components)
+
+
+def Simple(x, y):
+	return (x, y)

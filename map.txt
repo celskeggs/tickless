@@ -1,0 +1,23 @@
+x tile.Simple 0 0
+_ tile.Simple 1 0
+- door.DoorTileV
+| door.DoorTileH
+
+solid 0,0 2,0
+
+%%
+xxxxxxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxxxxxx
+xxxx_______xxxxxxxxx
+xxxx_______|____xxxx
+xxxx_______xxxx_xxxx
+xxxxxxx-xxxxxxx_xxxx
+xxxx______xxxxx_xxxx
+xxxx______|_____xxxx
+xxxx______xxxxxxxxxx
+xxxxxxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxxxxxx

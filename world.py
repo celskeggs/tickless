@@ -47,15 +47,22 @@ DIRECTION_COLORS = [(0, 255, 0), (0, 0, 255), (255, 0, 0), (255, 255, 0)]
 
 
 class World:
-	def __init__(self, width, height, tileset, default_tile, solid_tiles, time_provider):
+	def __init__(self, default_map, tileset, solid_tiles, time_provider):
 		self.tileset = tileset
 		self.time_provider = time_provider
-		self.layer = [[default_tile] * height for _ in range(width)]
+		assert default_map and default_map[0], "map must not be empty!"
+		rlen = len(default_map[0])
+		for column in default_map:
+			assert len(column) == rlen, "mismatched column lengths!"
+		self.layer = [list(column) for column in default_map]
 		self.tiles = {}
 		self.segments = [[], [], [], []]
 		self.solid_tiles = solid_tiles
 		self.cache_dirty = True
 		self.entities = []
+		for x, column in enumerate(self.layer):
+			for y, cell in enumerate(column):
+				self[x,y] = cell
 
 	def add_entity(self, ent):
 		self.entities.append(ent)

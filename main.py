@@ -9,6 +9,7 @@ import tile
 
 import door
 import player
+import loader
 
 
 class MainLoop:
@@ -21,7 +22,8 @@ class MainLoop:
 		self.tileset = world.Tileset("tileset2.png", 4, 4)
 		self.event_loop = sdle.EventLoop(
 			on_quit=self.on_quit, on_mouse_down=self.on_click, on_key_down=self.on_key_down, on_key_up=self.on_key_up)
-		self.world = world.World(19, 14, self.tileset, (0, 0), [(0, 0), (2, 0)], self.event_loop)
+		self.world = loader.load("map.txt", self.tileset, self.event_loop)
+		# world.World(19, 14, self.tileset, (0, 0), [(0, 0), (2, 0)], self.event_loop)
 		self.directions = [False, False, False, False]
 
 		self.gui = None
@@ -69,12 +71,12 @@ class MainLoop:
 			self.player.control_move(dx, dy)
 
 	def generate_world(self):
-		for x in range(3, 13):
-			if x == 7:
-				self.world[x, 7] = door.DoorTile()
-				continue
-			for y in range(6, 9):
-				self.world[x, y] = (1, 0)
+#		for x in range(3, 13):
+#			if x == 7:
+#				self.world[x, 7] = door.DoorTile()
+#				continue
+#			for y in range(6, 9):
+#				self.world[x, y] = (1, 0)
 		self.player = self.world.add_entity(player.Player(7.5 * 32, 7 * 32, self.open_gui))
 
 	def open_gui(self, gui):

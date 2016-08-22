@@ -3,7 +3,8 @@ __author__ = 'colby'
 import gui
 import tile
 
-TILE_DOOR_OPEN = (3, 0)
+TILE_DOOR_OPEN_H = (3, 0)
+TILE_DOOR_OPEN_V = (0, 1)
 TILE_DOOR_CLOSED = (2, 0)
 
 
@@ -32,4 +33,5 @@ class DoorComponent:
 	def on_update_is_open(self, ent):
 		ent.set_icon(self.open_icon if ent.is_open else self.closed_icon)
 
-DoorTile = tile.TileType(DoorComponent(TILE_DOOR_OPEN, TILE_DOOR_CLOSED))
+DoorTileH = tile.TileType(DoorComponent(TILE_DOOR_OPEN_H, TILE_DOOR_CLOSED))
+DoorTileV = tile.TileType(DoorComponent(TILE_DOOR_OPEN_V, TILE_DOOR_CLOSED))
